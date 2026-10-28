@@ -72,6 +72,9 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
         'ATOMIC_REQUESTS': False, # Explicit transaction management via services for concurrency control
+        'OPTIONS': {
+            'timeout': 30, # Wait up to 30s on SQLite busy handler during concurrent transactions
+        },
     }
 }
 

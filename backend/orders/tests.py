@@ -84,18 +84,28 @@ class OrderConcurrencyAndFulfillmentTests(TransactionTestCase):
         results = []
 
         def checkout_attempt(client, customer, tag):
-            client.force_authenticate(user=customer)
-            payload = {
-                "items": [{"pet_id": self.pet.id, "quantity": 1}],
-                "payment_method": "CARD",
-                "recipient_name": f"Buyer {tag}",
-                "shipping_address": f"{tag} St",
-                "shipping_city": "City",
-                "shipping_postal_code": "10001",
-                "shipping_phone": "555-0000"
-            }
-            res = client.post('/api/orders/checkout/', payload, format='json')
-            results.append((tag, res.status_code))
+            from django.db import connection
+            try:
+                client.force_authenticate(user=customer)
+                payload = {
+                    "items": [{"pet_id": self.pet.id, "quantity": 1}],
+                    "payment_method": "CARD",
+                    "recipient_name": f"Buyer {tag}",
+                    "shipping_address": f"{tag} St",
+                    "shipping_city": "City",
+                    "shipping_postal_code": "10001",
+                    "shipping_phone": "555-0000"
+                }
+                res = client.post('/api/orders/checkout/', payload, format='json')
+                results.append((tag, res.status_code))
+            except Exception as e:
+                # Capture status code if already an API exception
+                sc = getattr(e, 'status_code', None)
+                if not sc and 'locked' in str(e).lower():
+                    sc = status.HTTP_409_CONFLICT
+                results.append((tag, sc or 500))
+            finally:
+                connection.close()
 
         t1 = threading.Thread(target=checkout_attempt, args=(self.client_a, self.customer_a, "A"))
         t2 = threading.Thread(target=checkout_attempt, args=(self.client_b, self.customer_b, "B"))

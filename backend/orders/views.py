@@ -6,6 +6,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from django.db import OperationalError
 from drf_spectacular.utils import extend_schema
 
 from .models import Order
@@ -15,7 +16,7 @@ from .serializers import (
     CheckoutInputSerializer,
     OrderStatusUpdateSerializer,
 )
-from .services import OrderService
+from .services import OrderService, PetUnavailableException
 from accounts.permissions import IsShopOwner
 
 
@@ -32,19 +33,27 @@ class CheckoutView(APIView):
         serializer.is_valid(raise_exception=True)
 
         service = OrderService()
-        order = service.process_checkout(
-            customer=request.user,
-            shipping_data={
-                'recipient_name': serializer.validated_data['recipient_name'],
-                'shipping_address': serializer.validated_data['shipping_address'],
-                'shipping_city': serializer.validated_data['shipping_city'],
-                'shipping_postal_code': serializer.validated_data['shipping_postal_code'],
-                'shipping_phone': serializer.validated_data['shipping_phone'],
-                'delivery_notes': serializer.validated_data.get('delivery_notes', ''),
-            },
-            items_data=serializer.validated_data['items'],
-            payment_method=serializer.validated_data['payment_method'],
-        )
+        try:
+            order = service.process_checkout(
+                customer=request.user,
+                shipping_data={
+                    'recipient_name': serializer.validated_data['recipient_name'],
+                    'shipping_address': serializer.validated_data['shipping_address'],
+                    'shipping_city': serializer.validated_data['shipping_city'],
+                    'shipping_postal_code': serializer.validated_data['shipping_postal_code'],
+                    'shipping_phone': serializer.validated_data['shipping_phone'],
+                    'delivery_notes': serializer.validated_data.get('delivery_notes', ''),
+                },
+                items_data=serializer.validated_data['items'],
+                payment_method=serializer.validated_data['payment_method'],
+            )
+        except PetUnavailableException as e:
+            return Response({"detail": str(e.detail)}, status=status.HTTP_409_CONFLICT)
+        except OperationalError:
+            return Response(
+                {"detail": "This pet is currently being acquired by another customer. Please choose another pet or try again."},
+                status=status.HTTP_409_CONFLICT
+            )
 
         response_serializer = OrderDetailSerializer(order, context={'request': request})
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
