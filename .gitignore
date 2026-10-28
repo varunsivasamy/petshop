@@ -1,0 +1,23 @@
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+*.env
+**/.env
+**/venv/
+**/.venv/
+**/env/
+**/*.sqlite3
+**/media/
+!**/media/.gitkeep
+
+# Node
+**/node_modules/
+**/dist/
+**/build/
+.cache/
+*.log
+
+# IDE
+.vscode/
+.idea/
