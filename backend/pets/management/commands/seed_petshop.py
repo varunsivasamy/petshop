@@ -34,7 +34,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Starting PetShop database seeding...")
 
-        # 1. Create Demo Shop Owner
+        # 1. Create Demo Shop Owner (Superuser & Staff for Django Admin access)
         owner, created = User.objects.get_or_create(
             email="owner@petshop.com",
             defaults={
@@ -43,16 +43,19 @@ class Command(BaseCommand):
                 "last_name": "Paws",
                 "role": User.Role.SHOP_OWNER,
                 "is_verified": True,
+                "is_staff": True,
+                "is_superuser": True,
                 "phone_number": "+1 (555) 234-5678",
                 "address": "742 Evergreen Terrace",
                 "city": "Springfield",
                 "postal_code": "97477"
             }
         )
-        if created:
-            owner.set_password("owner123")
-            owner.save()
-            self.stdout.write(self.style.SUCCESS("Created Shop Owner: owner@petshop.com (password: owner123)"))
+        owner.is_staff = True
+        owner.is_superuser = True
+        owner.set_password("owner123")
+        owner.save()
+        self.stdout.write(self.style.SUCCESS("Created / Updated Shop Owner Admin: owner@petshop.com (password: owner123)"))
 
         # 2. Create Demo Customer (Verified)
         customer, created = User.objects.get_or_create(
