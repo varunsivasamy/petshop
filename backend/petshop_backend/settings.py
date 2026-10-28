@@ -67,16 +67,44 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'petshop_backend.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'ATOMIC_REQUESTS': False, # Explicit transaction management via services for concurrency control
-        'OPTIONS': {
-            'timeout': 30, # Wait up to 30s on SQLite busy handler during concurrent transactions
-        },
+# Database Configuration (Supports both SQLite for zero-config dev and PostgreSQL for production)
+DB_ENGINE = os.environ.get('DB_ENGINE', 'sqlite3').lower()
+
+if DB_ENGINE in ('postgres', 'postgresql'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'petshop_db'),
+            'USER': os.environ.get('DB_USER', 'postgres'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+            'ATOMIC_REQUESTS': False,
+        }
     }
-}
+elif DB_ENGINE == 'mysql':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'petshop_db'),
+            'USER': os.environ.get('DB_USER', 'root'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '3306'),
+            'ATOMIC_REQUESTS': False,
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'ATOMIC_REQUESTS': False, # Explicit transaction management via services for concurrency control
+            'OPTIONS': {
+                'timeout': 30, # Wait up to 30s on SQLite busy handler during concurrent transactions
+            },
+        }
+    }
 
 AUTH_USER_MODEL = 'accounts.User'
 
